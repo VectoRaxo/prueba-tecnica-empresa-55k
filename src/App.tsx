@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import './App.css'
-import './index.css'
 import { type User } from './types'
 import { UsersList } from './components/UsersList'
 
@@ -9,6 +8,7 @@ function App () {
   const [showColors, setShowColors] = useState(false)
   const [sortBycountry, setSortByCountry] = useState(false)
   const OriginalUsers = useRef<User[]>([]) // useRef => Para guardar un valor que se comparta entre renderizados, pero que al cambiar, no vuelva a renderizar el componente
+  const [filterCountry, setFilterCountry] = useState<string | null>(null)
 
   const toggleColors = () => {
     setShowColors(!showColors)
@@ -39,11 +39,21 @@ function App () {
       })
   }, [])
 
-  const sortedUsers = sortBycountry
-    ? users.toSorted((a, b) => {
-      return a.location.country.localeCompare(b.location.country)
-    })
-    : users
+  const filteredUsers = useMemo(() => {
+    return typeof filterCountry === 'string' && filterCountry.length > 0
+      ? users.filter((user => {
+        return user.location.country.toLowerCase().includes(filterCountry.toLowerCase())
+      }))
+      : users
+  }, [users, filterCountry])
+
+  const sortedUsers = useMemo(() => {
+    return sortBycountry
+      ? filteredUsers.toSorted(
+        (a, b) => a.location.country.localeCompare(b.location.country)
+      )
+      : filteredUsers
+  }, [filteredUsers, sortBycountry])
 
   return (
     <div className='App' >
@@ -52,6 +62,11 @@ function App () {
         <button onClick={toggleColors}>Colorear filas</button>
         <button onClick={toggleSortByCountry}>{sortBycountry ? 'No ordenar por país' : 'Ordenar por país'}</button>
         <button onClick={handleReset}>Restaurar borrados</button>
+        <input placeholder='Filtra por país' onChange={(e) => {
+          setFilterCountry(e.target.value)
+        }
+      }
+        />
       </header>
       <main>
       <UsersList deleteUser={handleDelete} users={sortedUsers} showColors={showColors} />
